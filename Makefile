@@ -163,7 +163,7 @@ upload: all
 .PHONY: assembly
 assembly: $(ELF)
 	$(OBJDUMP) --disassemble $(ELF) > $(ELF:.elf=.asm)
-	$(CC) -S $(SRCS) -o $(BUILD_DIR)/$(SRCS:.c=.s)
+	$(CC) $(CFLAGS) -S $(SRCS) -o $(BUILD_DIR)/$(SRCS:.c=.s)
 
 ##
 # Reset the build directory to default.
