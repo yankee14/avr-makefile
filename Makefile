@@ -65,7 +65,9 @@ CC = avr-gcc
 OBJCOPY = avr-objcopy # for creating .hex from .elf
 OBJDUMP = avr-objdump # for debugging
 
-CFLAGS = -Wall -O$(OPTIMIZATION_LEVEL) -DF_CPU=$(CPU_FREQ) -mmcu=$(MCU) -I$(AVR_LIBC_DIR)
+CFLAGS = -Wall -Wextra -Wpedantic -fdiagnostics-color -std=c99 \
+		 -O$(OPTIMIZATION_LEVEL) -DF_CPU=$(CPU_FREQ) -mmcu=$(MCU) \
+		 -I$(AVR_LIBC_DIR)
 
 ########
 #### Files and directories
