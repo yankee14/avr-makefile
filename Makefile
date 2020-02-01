@@ -1,190 +1,143 @@
-########
-#### This top section contains variables which may change more often
-#### than others. 
-########
-
-# See https://gcc.gnu.org/onlinedocs/gcc/AVR-Options.html for the
-# list of AVR devices and/or instruction set architectures to
-# assign to 'MCU'.
+# Project settings
+# (commonly modified settings)
+# 
+# Print Makefile debug info?
+DEBUG = true
 #
-# Compiled objects, including the final binary .hex file, will
-# be placed in a subdirectory titled build-'MCU' .
-MCU = atmega328p
+# Project name, determines build directory and binary name
+PROJECT_TITLE = project
+#
+# Optimization levels 0, 1, 2, 3, g, s, or fast
+OPTIMIZATION_LEVEL = s
+#
+# Microcontroller to be programmed (run avrdude -p ?)
+MCU = ATmega328P
+#
+# exclude files from compilation (space separated), e.g.
+# EXCLUDE = dontcompile.c noincludedir/ignoreme.h noincludedir/ignoreme.c
+EXCLUDE = dontcompile.c noincludedir/ignoreme.h noincludedir/ignoreme.c
+#
+# (uncommonly modified settings)
+BUILD_DIR = build_$(PROJECT_TITLE)
+BINARY = $(BUILD_DIR)/$(PROJECT_TITLE).elf
 
-# Clock frequency of the CPU, after prescalers and other clock
-# signal conditioning.
-CPU_FREQ = 16000000UL
-
-# Where are avr-libc headers such as <avr/io.h> located?
-AVR_LIBC_DIR = /usr/lib/avr/include
-
-# Which kind of in-system programmer (ISP) are you using?
-AVRDUDE_PROGRAMMER_ID = arduino
-
-# Symbols rate while reading and writing code to avr?
-AVRDUDE_BAUD = 115200
-
-# Which optimization setting should the compiler use?
-# See: https://gcc.gnu.org/onlinedocs/gcc-4.8.1/gcc/Optimize-Options.html
-OPTIMIZATION_LEVEL = fast
-
-###################################################################
-###################################################################
-#### Edits below this line probably are not needed very often. ####
-###################################################################
-###################################################################
-
-########
-#### If no chip information given
-########
-
-ifndef MCU # stop if device or ISA not specified
-    $(error No MCU specified.)
-endif
-
-ifndef CPU_FREQ # default to 1MHz unless otherwise specified
-    CPU_FREQ = 1000000UL
-endif
-
-########
-#### Avrdude setup
-########
-
-include ./Avrdude.mk
-
-########
-#### Compiler setup
-########
-
-ifndef OPTIMIZATION_LEVEL
-    OPTIMIZATION_LEVEL = s
-endif
-
+# --------------------
+# C compiler settings
+#
 CC = avr-gcc
-#CXX = avr-g++ # TODO
-OBJCOPY = avr-objcopy # for creating .hex from .elf
-OBJDUMP = avr-objdump # for debugging
+CC_PREPROCESS_FLAG = -E
+CC_COMPILE_FLAG = -S
+CC_ASSEMBLER = avr-as
+CC_LINKER = avr-ld
+CC_DEBUGGER = avr-gdb
+CWARN = -Wall -Wextra -Wpedantic
 
-CFLAGS = -Wall -Wextra -Wpedantic -fdiagnostics-color -std=c99 \
-		 -O$(OPTIMIZATION_LEVEL) -DF_CPU=$(CPU_FREQ) -mmcu=$(MCU) \
-		 -I$(AVR_LIBC_DIR)
+# --------------------
+# C++ compiler settings
+#
+CXX = avr-g++
+CXXWARN = -Wall -Wextra -Wpedantic
 
-########
-#### Files and directories
-########
+# --------------------
+# Programmer settings
+#
+FLASH_TOOL = avrdude
+PROGRAMMER = arduino
+PROGRAMMER_BAUD = 115200
+PROGRAMMER_DEVICE = /dev/ttyACM0
+PROGRAMMER_FLAGS = 
 
-# Store objects and binaries in a subdirectory called "build_$(MCU)",
-# e.g. ~/MyProject/src/build_atmega328p/
-ifndef BUILD_DIR
-    BUILD_DIR = ./build_$(MCU)
+# --------------------
+# OS dependent settings
+#
+MKDIR = mkdir
+MKDIR_FLAGS = --parents --verbose --
+RM = rm
+RM_FLAGS = --recursive --verbose --force --
+# generate build directory structure
+dir_structure = $(shell find . -type d ! -path "." -printf '%P\n' | grep -v $(BUILD_DIR))
+dir_structure := $(filter-out $(EXCLUDE),$(dir_structure))
+build_dir_structure := $(patsubst %,$(BUILD_DIR)/%,$(dir_structure))
+# generate file build lists
+c_headers = $(shell find . -type f -iname "*.h" -printf "%P\n")
+c_sources = $(shell find . -type f -iname "*.c" -printf "%P\n")
+cpp_headers = $(shell find . -type f -iname "*.hpp" -printf "%P\n")
+cpp_sources = $(shell find . -type f -iname "*.cpp" -printf "%P\n")
+# prune excluded files from lists
+c_headers := $(filter-out $(EXCLUDE),$(c_headers))
+c_sources := $(filter-out $(EXCLUDE),$(c_sources))
+cpp_headers := $(filter-out $(EXCLUDE),$(cpp_headers))
+cpp_sources := $(filter-out $(EXCLUDE),$(cpp_sources))
+# precompile
+
+# --------------------
+# Makefile debug
+ifeq ($(strip $(DEBUG)),true)
+    $(info PROJECT_TITLE:$(PROJECT_TITLE)--)
+    $(info OPTIMIZATION_LEVEL:$(OPTIMIZATION_LEVEL)--)
+    $(info EXCLUDE:$(EXCLUDE)--)
+    $(info BUILD_DIR:$(BUILD_DIR)--)
+    $(info BINARY:$(BINARY)--)
+    $(info CC:$(CC)--)
+    $(info CWARN:$(CWARN)--)
+    $(info CXX:$(CXX)--)
+    $(info MKDIR:$(MKDIR)--)
+    $(info MKDIR_FLAGS:$(MKDIR_FLAGS)--)
+    $(info RM:$(RM)--)
+    $(info RM_FLAGS:$(RM_FLAGS)--)
+    $(info dir_structure:$(dir_structure)--)
+    $(info build_dir_structure:$(build_dir_structure)--)
+    $(info c_headers:$(c_headers)--)
+    $(info c_sources:$(c_sources)--)
+    $(info cpp_headers:$(cpp_headers)--)
+    $(info cpp_sources:$(cpp_sources)--)
 endif
 
-# Specify avr-libc headers
-AVR_LIBC = /usr/lib/avr/include
-
-# Get list of all c files compiled
-SRCS = $(wildcard *.c)
-
-# List of objects to be created or updated
-OBJS = $(BUILD_DIR)/$(SRCS:.c=.o)
-
-# Name of built binary, not flashable
-ELF = $(BUILD_DIR)/$(MCU).elf
-
-# Name of built binary to be flashed
-BINARY = $(BUILD_DIR)/$(MCU).hex
-
-########
-#### Build targets
-########
-
-# Shell commands used
-MKDIR	= mkdir -p
-RMDIR 	= $(RM) -r
-PRINT   = printf
-
-.DEFAULT_GOAL := all
-
-##
-# The final *.hex binary to be flashed,
-# depends on the not-flashable *.elf binary.
+# Build targets
 #
-# 1. Deletes previous *.hex, if any.
-# 2. Recreates *.hex from *.elf using avr-objcopy.
 .PHONY: all
-all: $(BINARY)
-$(BINARY): $(ELF)
-	$(RM) $(BINARY)
-	$(OBJCOPY) --only-section .text --only-section .data --output-target ihex $(ELF) $(BINARY)
-
-##
-# Link up the final *.elf binary,
-# depends on the *.o object files compiled by avr-gcc.
+all: link
 #
-# 1. Link compiled objects into *.elf binary.
 #
-$(ELF): $(OBJS)
-	$(CC) $(CFLAGS) -o $(ELF) $(OBJS)
-
-##
-# Create *.o objects,
-# depends on the *.c files the user has written.
+.PHONY: debug
+debug:
 #
-# 1. Ensure the build directory exists.
-# 2. Create the objects from the sources.
 #
-$(OBJS): $(SRCS)
-	$(MKDIR) $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-##
-# Invoke avrdude to upload the *.hex to the avr,
-# depends on everything being built.
+.PHONY: verify
+verify:
 #
-# 1. Upload the hex file to the avr.
 #
-.PHONY: upload
-upload: all
-	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:$(BUILD_DIR)/$(MCU).hex:i
-
-# fuse does not require a binary to flash 
-# TODO fuse seems to be broken...
-#.PHONY: fuse
-#fuse:
-#	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_FUSE_FLAGS)
-
-##
-# Generate avr assembly and place in text files *.asm and *.s,
-# depends on the *.elf existing.
+.PHONY: flash
+flash:
 #
-# 1. Generate *.asm from *.elf using avr-objdump.
-# 2. Generate *.s from *.c using avr-gcc.
 #
-.PHONY: assembly
-assembly: $(ELF)
-	$(OBJDUMP) --disassemble $(ELF) > $(ELF:.elf=.asm)
-	$(CC) $(CFLAGS) -S $(SRCS) -o $(BUILD_DIR)/$(SRCS:.c=.s)
-
-##
-# Reset the build directory to default.
+.PHONY: link
+link: assemble
 #
-# 1. Delete the entire build directory.
+#
+.PHONY: assemble
+assemble: compile
+#
+#
+.PHONY: compile
+compile: preprocess
+#
+#
+.PHONY: preprocess
+preprocess: build_dir
+	$(CC) $(CC_PREPROCESS_FLAG) 
+#
+#
+.PHONY: build_dir
+build_dir:
+	$(MKDIR) $(MKDIR_FLAGS) $(build_dir_structure)
+#
 #
 .PHONY: clean
 clean:
-	$(RMDIR) $(BUILD_DIR)
-
-
-##
-# Print information about valid targets to the prompt.
+	$(RM) $(RM_FLAGS) $(BUILD_DIR)
+#
 #
 .PHONY: help
 help:
-	@$(PRINT) "\nAvailable build targets:\n\
- make          - compile only.\n\
- make upload   - invoke avrdude, upload code to board.\n\
- #make fuse     - BROKEN set fuses. See BTLDR chapter in datasheet.\n\
- make assembly - avr assembly for debugging.\n\
- make clean    - delete the build subdirectory.\n\
- make help     - show this help.\n\n"
 
