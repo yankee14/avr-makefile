@@ -4,12 +4,12 @@
 
 void main(void)
 {
-    DDRB |= 0x01;
+    DDRB |= (1 << 4);
 
     for(;;) {
-        PORTB |= 0x01;
+        PORTB |= (1 << 4);
         _delay_ms(1000);
-        PORTB &= ~(0x01);
+        PORTB &= ~(1 << 4);
         _delay_ms(1000);
     }
 }

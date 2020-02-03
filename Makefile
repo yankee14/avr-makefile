@@ -11,14 +11,18 @@ PROJECT_TITLE = project
 OPTIMIZATION_LEVEL = s
 #
 # Microcontroller to be programmed (run avrdude -p ?)
-MCU = ATmega328P
+MCU = atmega328p
+#
+# Microcontroller clock speed
+F_CPU = 16E6
 #
 # exclude files and directories from compilation (space separated), e.g.
 # EXCLUDE = dontcompile.c noincludedir/ignoreme.h noincludedir/ignoreme.c
-EXCLUDE = .git dontcompile.c noincludedir/ignoreme.h noincludedir/ignoreme.c
+EXCLUDE = .git include/subdir/test2.c
 #
-# (uncommonly modified settings)
+# Where to place build artifacts
 BUILD_DIR = build_$(PROJECT_TITLE)
+# Where to place binary
 BINARY = $(BUILD_DIR)/$(PROJECT_TITLE).elf
 
 # --------------------
@@ -28,11 +32,12 @@ CC = avr-gcc
 CC_STD = gnu11
 CC_PREPROCESS_FLAG = -E
 CC_COMPILE_FLAG = -S
-CC_ASSEMBLER = avr-as
-CC_LINKER = avr-ld
-CC_DEBUGGER = avr-gdb
+C_ASSEMBLER = avr-as
+C_LINKER = avr-ld
+C_DEBUGGER = avr-gdb
 CWARN = -Wall -Wextra -Wpedantic
-CFLAGS = -MM $(CWARN)
+CFLAGS = -g -mmcu=$(MCU) -DF_CPU=$(F_CPU) $(CWARN)
+C_ASSEMBLER_FLAGS = -g -mmcu=$(MCU)
 
 # --------------------
 # Programmer settings
@@ -41,6 +46,8 @@ FLASH_TOOL = avrdude
 PROGRAMMER = arduino
 PROGRAMMER_BAUD = 115200
 PROGRAMMER_DEVICE = /dev/ttyACM0
+PROGRAMMER_WRITE_PROGRAM = -U flash:w:$(BINARY):e
+PROGRAMMER_VERIFY_PROGRAM = -U flash:v$(BINARY):e
 PROGRAMMER_FLAGS = 
 
 # --------------------
@@ -54,7 +61,7 @@ RM_FLAGS = --recursive --verbose --force --
 # generate build directory structure
 dir_structure := $(shell find . -type d ! -path "." -printf '%P\n' | grep -v "$(BUILD_DIR)" | grep -v ".git")
 dir_structure := $(filter-out $(EXCLUDE),$(dir_structure))
-build_dir_structure := $(patsubst %,$(BUILD_DIR)/%,$(dir_structure))
+build_dir_structure := $(BUILD_DIR) $(patsubst %,$(BUILD_DIR)/%,$(dir_structure))
 #
 # generate file build lists
 c_headers := $(shell find . -type f -iname "*.h" -printf "%P\n")
@@ -64,8 +71,9 @@ c_sources := $(shell find . -type f -iname "*.c" -printf "%P\n")
 c_headers := $(filter-out $(EXCLUDE),$(c_headers))
 c_sources := $(filter-out $(EXCLUDE),$(c_sources))
 #
-# precompile
-
+c_preprocess := $(patsubst %,$(BUILD_DIR)/%,$(c_sources:.c=.i))
+c_compile := $(patsubst %,$(BUILD_DIR)/%,$(c_sources:.c=.s))
+c_assemble := $(patsubst %, $(BUILD_DIR)/%, $(c_sources:.c=.o))
 
 # --------------------
 # Makefile debug
@@ -86,6 +94,9 @@ ifeq ($(strip $(DEBUG)),true)
     $(info build_dir_structure:$(build_dir_structure)--)
     $(info c_headers:$(c_headers)--)
     $(info c_sources:$(c_sources)--)
+	$(info c_preprocess:$(c_preprocess)--)
+	$(info c_compile:$(c_compile)--)
+	$(info c_assemble:$(c_assemble)--)
 endif
 
 # Build targets
@@ -106,21 +117,40 @@ verify:
 flash:
 #
 #
+.PHONY: binary
+binary: link
+#
+#
+$(BINARY): 
+	$(C_LINKER) -m avr5 -o $@ $(c_assemble) -L/usr/lib/avr/lib -lc
+#
+#
 .PHONY: link
-link: assemble
+link: assemble $(BINARY)
+#
+#
+$(c_assemble): %.o: %.s
+	$(C_ASSEMBLER) $(C_ASSEMBLER_FLAGS) -o $@ $<
 #
 #
 .PHONY: assemble
-assemble: compile
+assemble: compile $(c_assemble)
+#
+#
+$(c_compile): %.s: %.i
+	$(CC) $(CC_COMPILE_FLAG) $(CFLAGS) -o $@ $<
 #
 #
 .PHONY: compile
-compile: preprocess
+compile: preprocess $(c_compile)
+#
+#
+$(c_preprocess): $(BUILD_DIR)/%.i: %.c
+	$(CC) $(CC_PREPROCESS_FLAG) $(CFLAGS) -o $@ $<
 #
 #
 .PHONY: preprocess
-preprocess: build_dir
-	$(CC) $(CC_PREPROCESS_FLAG) 
+preprocess: build_dir $(c_preprocess)
 #
 #
 .PHONY: build_dir
