@@ -1,0 +1,5 @@
+# ignore build artifacts
+*.i
+*.s
+*.o
+*.elf
