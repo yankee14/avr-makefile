@@ -94,9 +94,9 @@ ifeq ($(strip $(DEBUG)),true)
     $(info build_dir_structure:$(build_dir_structure)--)
     $(info c_headers:$(c_headers)--)
     $(info c_sources:$(c_sources)--)
-	$(info c_preprocess:$(c_preprocess)--)
-	$(info c_compile:$(c_compile)--)
-	$(info c_assemble:$(c_assemble)--)
+    $(info c_preprocess:$(c_preprocess)--)
+    $(info c_compile:$(c_compile)--)
+    $(info c_assemble:$(c_assemble)--)
 endif
 
 # Build targets
