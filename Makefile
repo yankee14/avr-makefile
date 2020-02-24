@@ -14,7 +14,7 @@ OPTIMIZATION_LEVEL = s
 MCU = atmega328p
 #
 # Microcontroller clock speed
-F_CPU = 16E6
+F_CPU = 16000000
 #
 # exclude files and directories from compilation (space separated), e.g.
 # EXCLUDE = dontcompile.c noincludedir/ignoreme.h noincludedir/ignoreme.c
@@ -24,6 +24,9 @@ EXCLUDE = .git include/subdir/test2.c
 BUILD_DIR = build_$(PROJECT_TITLE)
 # Where to place binary
 BINARY = $(BUILD_DIR)/$(PROJECT_TITLE).elf
+# Filename of simulation trace
+# this filename must match the entry in trace.h
+SIM_TRACE = simulation.vcd
 
 # --------------------
 # C compiler settings
@@ -49,6 +52,14 @@ PROGRAMMER_DEVICE = /dev/ttyACM0
 PROGRAMMER_WRITE_PROGRAM = -U flash:w:$(BINARY):e
 PROGRAMMER_VERIFY_PROGRAM = -U flash:v$(BINARY):e
 PROGRAMMER_FLAGS = 
+
+# --------------------
+# Simulation settings
+#
+SIMAVR = simavr
+SIMAVR_FLAGS = --freq $(F_CPU) --mcu $(MCU)
+
+GTKWAVE = gtkwave
 
 # --------------------
 # OS dependent settings
@@ -117,10 +128,16 @@ verify:
 flash:
 #
 #
+.PHONY: simulate
+simulate: binary
+	$(SIMAVR) $(SIMAVR_FLAGS) $(BINARY)
+	$(GTKWAVE) $(SIM_TRACE)
+#
+#
 .PHONY: binary
 binary: link
 #
-#
+
 $(BINARY): 
 	$(C_LINKER) -m avr5 -o $@ $(c_assemble) -L/usr/lib/avr/lib -lc
 #
@@ -160,7 +177,7 @@ build_dir:
 #
 .PHONY: clean
 clean:
-	$(RM) $(RM_FLAGS) $(BUILD_DIR)
+	$(RM) $(RM_FLAGS) $(BUILD_DIR) $(SIM_TRACE)
 #
 #
 .PHONY: help

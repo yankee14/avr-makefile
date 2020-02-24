@@ -3,6 +3,9 @@
 
 #include "/usr/local/include/simavr/avr/avr_mcu_section.h"
 
+// simavr trace output filename
+AVR_MCU_VCD_FILE("simulation.vcd", 1);
+
 const struct avr_mmcu_vcd_trace_t _mytrace[]  _MMCU_ = {
     // AVR status
 	{ AVR_MCU_VCD_SYMBOL("SREG"), .what = (void*)&SREG, },
@@ -52,3 +55,4 @@ const struct avr_mmcu_vcd_trace_t _mytrace[]  _MMCU_ = {
 };
 
 #endif
+

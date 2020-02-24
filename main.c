@@ -2,7 +2,6 @@
 #include <util/delay.h>
 #include <avr/io.h>
 
-#define DEBUG
 #define TRACE
 
 #ifdef TRACE
